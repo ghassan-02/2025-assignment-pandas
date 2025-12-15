@@ -32,9 +32,19 @@ def merge_regions_and_departments(regions, departments):
     reg = regions.copy()
     dep = departments.copy()
 
-    reg = reg.rename(columns={"code": "code_reg", "name": "name_reg"})
-    dep = dep.rename(columns={"code": "code_dep", "name": "name_dep"})
-    res = pd.merge(left=reg, right=dep, left_on="code_reg", right_on="region_code")
+    reg = reg.rename(
+        columns={"code": "code_reg", "name": "name_reg"}
+    )
+    dep = dep.rename(
+        columns={"code": "code_dep", "name": "name_dep"}
+    )
+
+    res = pd.merge(
+        left=reg,
+        right=dep,
+        left_on="code_reg",
+        right_on="region_code",
+    )
 
     return res[["code_reg", "name_reg", "code_dep", "name_dep"]]
 
@@ -52,11 +62,20 @@ def merge_referendum_and_areas(referendum, regions_and_departments):
     areas = regions_and_departments.copy()
 
     is_digits = ref["Department code"].str.fullmatch(r"\d+")
-    ref.loc[is_digits, "Department code"] = ref.loc[is_digits, "Department code"].str.zfill(2)
+    ref.loc[is_digits, "Department code"] = (
+        ref.loc[is_digits, "Department code"].str.zfill(2)
+    )
 
-    ref = ref[~ref["Department code"].str.contains("Z", na=False)]
+    ref = ref[
+        ~ref["Department code"].str.contains("Z", na=False)
+    ]
 
-    merged = ref.merge(areas, left_on="Department code", right_on="code_dep", how="inner")
+    merged = ref.merge(
+        areas,
+        left_on="Department code",
+        right_on="code_dep",
+        how="inner",
+    )
 
     return merged
 
@@ -68,15 +87,28 @@ def compute_referendum_result_by_regions(referendum_and_areas):
     ['name_reg', 'Registered', 'Abstentions', 'Null', 'Choice A', 'Choice B']
     """
 
-    cols = ["Registered", "Abstentions", "Null", "Choice A", "Choice B"]
+    cols = [
+        "Registered",
+        "Abstentions",
+        "Null",
+        "Choice A",
+        "Choice B",
+    ]
+
     df = referendum_and_areas.copy()
 
-    df[cols] = df[cols].apply(pd.to_numeric, errors="coerce").fillna(0)
+    df[cols] = df[cols].apply(
+        pd.to_numeric,
+        errors="coerce",
+    ).fillna(0)
 
     res = (
-        df.groupby(["code_reg", "name_reg"], as_index=False)[cols]
-          .sum()
-          .set_index("code_reg")
+        df.groupby(
+            ["code_reg", "name_reg"],
+            as_index=False,
+        )[cols]
+        .sum()
+        .set_index("code_reg")
     )
 
     return res[["name_reg"] + cols]
@@ -94,8 +126,14 @@ def plot_referendum_map(referendum_result_by_regions):
 
     gdf_regions = gpd.read_file("data/regions.geojson")
 
-    gdf_regions = gdf_regions.rename(columns={"code": "code_reg"})
-    gdf_regions["code_reg"] = gdf_regions["code_reg"].astype(str).str.strip()
+    gdf_regions = gdf_regions.rename(
+        columns={"code": "code_reg"}
+    )
+    gdf_regions["code_reg"] = (
+        gdf_regions["code_reg"]
+        .astype(str)
+        .str.strip()
+    )
 
     rr = referendum_result_by_regions.copy()
     rr.index = rr.index.astype(str).str.strip()
@@ -104,7 +142,17 @@ def plot_referendum_map(referendum_result_by_regions):
     rr["ratio"] = (rr["Choice A"] / expressed).fillna(0)
 
     gdf = gdf_regions.merge(
-        rr[["name_reg", "Registered", "Abstentions", "Null", "Choice A", "Choice B", "ratio"]],
+        rr[
+            [
+                "name_reg",
+                "Registered",
+                "Abstentions",
+                "Null",
+                "Choice A",
+                "Choice B",
+                "ratio",
+            ]
+        ],
         left_on="code_reg",
         right_index=True,
         how="left",
